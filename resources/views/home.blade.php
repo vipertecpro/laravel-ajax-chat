@@ -23,6 +23,9 @@
                                                 #
                                             </th>
                                             <th>
+                                                ID
+                                            </th>
+                                            <th>
                                                 Username
                                             </th>
                                             <th>
@@ -37,6 +40,7 @@
                                         @foreach($users as $key => $value)
                                             <tr>
                                                 <td>{{ $key = $key + 1   }}</td>
+                                                <td>{{ $value->id }}</td>
                                                 <td>{{ $value->username }}</td>
                                                 <td>{{ $value->email }}</td>
                                                 <td>
@@ -62,13 +66,13 @@
 
     <div id="chatContainer">
         <div id="conversation">
-            @include('conversationList')
         </div>
         <div id="messageTextBtn">
             <div class="row">
                 <div class="col-md-12">
                     <div class="input-group">
-                        <textarea class="form-control" placeholder="Enter message here . . ." aria-label="Enter message here . . ." aria-describedby="basic-addon2"></textarea>
+                        <input id="sendToID" name="sendToID" type="hidden">
+                        <textarea id="message" class="form-control" placeholder="Enter message here . . ." aria-label="Enter message here . . ." aria-describedby="basic-addon2"></textarea>
                         <div class="input-group-append">
                             <button class="btn btn-outline-success sendMessage" type="button">Send</button>
                         </div>
@@ -157,6 +161,28 @@
 
 @section('scripts')
     <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        function renderList(getUserSendToId){
+            jQuery.ajax({
+                url: "{{ route('renderConversationList') }}",
+                method: 'post',
+                data: {
+                    getUserSendToId: getUserSendToId
+                },
+                success: function(result){
+                    $('#chatContainer #conversation')
+                        .html(result.html)
+                        .scrollTop($("#chatContainer #conversation")[0].scrollHeight);
+                },
+                error: function(result){
+                    console.log(result);
+                }
+            });
+        }
         $(document).click(function(evt){
             if($(evt.target).closest(".startChat").length > 0){
                 return false;
@@ -178,9 +204,31 @@
                 container.animate({height:400},200).addClass('hide');
                 $('#conversation').css('display','block');
                 $('#messageTextBtn').css('display','block');
-                let getUserSendToId = $(this).attr('data-user-id');
-                alert(getUserSendToId);
             }
+            let getUserSendToId = $(this).attr('data-user-id');
+            $('#sendToID').val(getUserSendToId)
+            renderList(getUserSendToId);
+        });
+
+        $(document).on('click','.sendMessage',function(){
+            let getUserSendToId = $('#sendToID').val();
+            let message = $('#chatContainer #message').val();
+            jQuery.ajax({
+                url: "{{ route('sendMessage') }}",
+                method: 'post',
+                data: {
+                    getUserSendToId: getUserSendToId,
+                    message: message,
+                },
+                success: function(result){
+                    console.log(result);
+                    $('#chatContainer #message').val('');
+                    renderList(getUserSendToId);
+                },
+                error: function(result){
+                    console.log(result);
+                }
+            });
         });
     </script>
 @endsection
